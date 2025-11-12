@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.hoianweb.model.bean.Image;
 import com.hoianweb.model.bean.Location;
@@ -19,16 +20,22 @@ public class LocationDAO {
         "SELECT l.*, c.name AS category_name " +
         "FROM location l " +
         "LEFT JOIN category c ON l.category_id = c.id ";
-
+    /**
+     * TỐI ƯU HÓA: Lấy tất cả Location kèm Avatar (tránh N+1 query)
+     */
     public List<Location> getAll() {
         List<Location> list = new ArrayList<>();
+        Map<Integer, String> avatarMap = imageDAO.getFirstImageMap();
+        
         String sql = SELECT_BASE + "ORDER BY l.name";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
+            
             while (rs.next()) {
-                // CHỈ DÙNG MAPPER CƠ BẢN (KHÔNG GÂY LỖI N+1)
-                list.add(mapResultSetToLocation_Basic(rs)); 
+                Location loc = mapResultSetToLocation_Basic(rs);
+                loc.setAvata(avatarMap.get(loc.getId())); 
+                list.add(loc);
             }
         } catch (SQLException e) { 
             e.printStackTrace(); 
@@ -37,7 +44,7 @@ public class LocationDAO {
     }
 
     /**
-     * Sửa lỗi: Gọi mapResultSetToLocation_Full
+     * Lấy 1 Location ĐẦY ĐỦ (gồm cả gallery)
      */
     public Location getBySlug(String slug) {
         String sql = SELECT_BASE + "WHERE l.slug = ?";
@@ -46,7 +53,6 @@ public class LocationDAO {
             pstmt.setString(1, slug);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    // DÙNG MAPPER ĐẦY ĐỦ (CÓ GALLERY)
                     return mapResultSetToLocation_Full(rs); 
                 }
             }
@@ -55,23 +61,28 @@ public class LocationDAO {
     }
 
     /**
-     * Sửa lỗi: Gọi mapResultSetToLocation_Basic
+     * TỐI ƯU HÓA: Lấy Location theo Category kèm Avatar (tránh N+1)
      */
     public List<Location> getByCategoryId(int categoryId) {
         List<Location> list = new ArrayList<>();
+        Map<Integer, String> avatarMap = imageDAO.getFirstImageMap();
+        
         String sql = SELECT_BASE + "WHERE l.category_id = ? ORDER BY l.name";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, categoryId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    list.add(mapResultSetToLocation_Basic(rs));
+                    Location loc = mapResultSetToLocation_Basic(rs);
+                    loc.setAvata(avatarMap.get(loc.getId()));
+                    list.add(loc);
                 }
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return list;
     }
 
+    // --- CÁC HÀM CRUD
     public int create(Location loc) {
         String sql = "INSERT INTO location (name, slug, longitude, latitude, description, category_id) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBContext.getConnection();
@@ -88,7 +99,7 @@ public class LocationDAO {
                 }
             }
         } catch (SQLException e) { e.printStackTrace(); }
-        return -1;
+        return -1; 
     }
     
     public boolean update(Location loc) {
@@ -108,6 +119,7 @@ public class LocationDAO {
         return false;
     }
 
+    //hàm delete
     public List<String> delete(int id) {
     	List<String> urlsToDelete = imageDAO.getUrlsByLocationId(id);
         String sql = "DELETE FROM location WHERE id = ?";
@@ -115,12 +127,13 @@ public class LocationDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             if( pstmt.executeUpdate() > 0) {
-            	return urlsToDelete;
+            	return urlsToDelete; // Trả về list ảnh để xóa
             }
         } catch (SQLException e) { e.printStackTrace(); }
-        return null;
+        return null; // Trả về null nếu xóa thất bại
     }
 
+    // Mapper cơ bản (Không lấy gallery)
     private Location mapResultSetToLocation_Basic(ResultSet rs) throws SQLException {
         Location loc = new Location(
             rs.getInt("id"), rs.getString("name"), rs.getString("slug"),
@@ -131,8 +144,8 @@ public class LocationDAO {
         return loc;
     }
 
+    // Mapper đầy đủ (Lấy cả gallery, chỉ dùng cho 1 đối tượng)
     private Location mapResultSetToLocation_Full(ResultSet rs) throws SQLException {
-
         Location loc = mapResultSetToLocation_Basic(rs);
         List<Image> gallery = imageDAO.getByLocationId(loc.getId());
         loc.setGallery(gallery);

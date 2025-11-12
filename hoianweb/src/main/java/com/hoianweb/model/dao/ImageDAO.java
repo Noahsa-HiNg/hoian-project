@@ -6,7 +6,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import com.hoianweb.model.bean.Image;
 import com.hoianweb.util.DBContext;
 
@@ -26,10 +29,45 @@ public class ImageDAO {
         } catch (SQLException e) { e.printStackTrace(); }
         return imageList;
     }
+    
+    public List<String> getUrlsByLocationId(int locationId) {
+	    List<String> urlList = new ArrayList<>();
+	    String sql = "SELECT image_url FROM image WHERE location_id = ?"; 
+	    try (Connection conn = DBContext.getConnection();
+	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+	        pstmt.setInt(1, locationId);
+	        try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	                urlList.add(rs.getString("image_url"));
+	            }
+	        }
+	    } catch (SQLException e) { e.printStackTrace(); }
+	    return urlList;
+	}
+    
+    // HÀM TỐI ƯU (Dùng cho LocationDAO.getAll)
+    public Map<Integer, String> getFirstImageMap() {
+	    Map<Integer, String> imageMap = new HashMap<>();
+	    String sql = " SELECT location_id, image_url FROM ("
+	               + "    SELECT location_id, image_url,"
+	               + "           ROW_NUMBER() OVER(PARTITION BY location_id ORDER BY id ASC) as rn"
+	               + "    FROM image"
+	               + " ) AS RankedImages"
+	               + " WHERE rn = 1";
 
+	    try (Connection conn = DBContext.getConnection();
+	         PreparedStatement pstmt = conn.prepareStatement(sql);
+	         ResultSet rs = pstmt.executeQuery()) {
+	        while (rs.next()) {
+	            imageMap.put(rs.getInt("location_id"), rs.getString("image_url"));
+	        }
+	    } catch (SQLException e) { e.printStackTrace(); }
+	    return imageMap;
+	}
+
+    //Hàm create trả về int 
     public int create(Image image) {
         String sql = "INSERT INTO image (image_url, location_id) VALUES (?, ?)";
-
         try (Connection conn = DBContext.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
@@ -37,18 +75,15 @@ public class ImageDAO {
             pstmt.setInt(2, image.getLocationId());
             
             int affectedRows = pstmt.executeUpdate();
-
             if (affectedRows > 0) {
                 try (ResultSet rs = pstmt.getGeneratedKeys()) {
                     if (rs.next()) {
-                        return rs.getInt(1); // Trả về ID
+                        return rs.getInt(1); 
                     }
                 }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return -1; // Trả về -1 nếu thất bại
+        } catch (SQLException e) { e.printStackTrace(); }
+        return -1; 
     }
     
      public boolean delete(int id) {
@@ -60,45 +95,4 @@ public class ImageDAO {
         } catch (SQLException e) { e.printStackTrace(); }
         return false;
     }
-     public java.util.Map<Integer, String> getFirstImageMap() {
-    	    java.util.Map<Integer, String> imageMap = new java.util.HashMap<>();
-    	    String sql = " SELECT location_id, image_url FROM ("
-    	               + "    SELECT location_id, image_url,"
-    	               + "           ROW_NUMBER() OVER(PARTITION BY location_id ORDER BY id ASC) as rn"
-    	               + "    FROM image"
-    	               + " ) AS RankedImages"
-    	               + " WHERE rn = 1";
-
-    	    try (Connection conn = DBContext.getConnection();
-    	         PreparedStatement pstmt = conn.prepareStatement(sql);
-    	         ResultSet rs = pstmt.executeQuery()) {
-
-    	        while (rs.next()) {
-    	            imageMap.put(rs.getInt("location_id"), rs.getString("image_url"));
-    	        }
-    	    } catch (SQLException e) {
-    	        e.printStackTrace();
-    	    }
-    	    return imageMap;
-    	}
-     public List<String> getUrlsByLocationId(int locationId) {
-    	    List<String> urlList = new ArrayList<>();
-    	    // Lấy đúng cột 'image_url'
-    	    String sql = "SELECT image_url FROM image WHERE location_id = ?"; 
-
-    	    try (Connection conn = DBContext.getConnection();
-    	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-    	        
-    	        pstmt.setInt(1, locationId);
-
-    	        try (ResultSet rs = pstmt.executeQuery()) {
-    	            while (rs.next()) {
-    	                urlList.add(rs.getString("image_url"));
-    	            }
-    	        }
-    	    } catch (SQLException e) {
-    	        e.printStackTrace();
-    	    }
-    	    return urlList; // Trả về danh sách URL
-    	}
 }
