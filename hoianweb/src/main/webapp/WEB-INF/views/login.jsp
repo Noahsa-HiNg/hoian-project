@@ -22,50 +22,35 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/main.css">
 
     <style>
-        /* ==== Remove white space above header ===== */
-        body {
-            margin: 0; 
-        }
-        .protfolio-wrap {
-            margin-top: 0 !important;
-        }
-        /* =========================================== */
-
-        .default-header {
-            background-color: rgba(4, 9, 30, 0.8);
-        }
-        
-        .login-form-section {
-            padding-top: 120px;
-            padding-bottom: 60px;
-        }
+        body { margin: 0; }
+        .protfolio-wrap { margin-top: 0 !important; }
+        .default-header { background-color: rgba(4, 9, 30, 0.8); }
+        .login-form-section { padding: 120px 0 60px; }
     </style>
-
 </head>
 <body>
-    
     <div class="protfolio-wrap">
 
         <header class="default-header">
-            <nav class="navbar navbar-expand-lg  navbar-light">
+            <nav class="navbar navbar-expand-lg navbar-light">
                 <div class="container">
-                      <a class="navbar-brand" href="index">
-                          <img src="${pageContext.request.contextPath}/img/logo.png" alt="">
-                      </a>
-                      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <a class="navbar-brand" href="index">
+                        <img src="${pageContext.request.contextPath}/img/logo.png" alt="">
+                    </a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
                         <span class="text-white lnr lnr-menu"></span>
-                      </button>
-
-                      <div class="collapse navbar-collapse justify-content-end align-items-center" id="navbarSupportedContent">
+                    </button>
+                    <div class="collapse navbar-collapse justify-content-end align-items-center" id="navbarSupportedContent">
                         <ul class="navbar-nav">
                             <li><a href="index">Home</a></li>
                             <li><a href="map">Map</a></li>
                             <li><a href="login">Login</a></li>
                         </ul>
-                      </div>						
+                    </div>						
                 </div>
             </nav>
         </header>
+
         <section class="login-form-section"> 
             <div class="container">
                 <div class="row justify-content-center">
@@ -84,8 +69,7 @@
                                         <input type="password" class="form-control" id="password" required>
                                     </div>
                                     
-                                    <div id="error-message" class="alert alert-danger d-none" role="alert">
-                                        </div>
+                                    <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
                                     
                                     <div class="d-grid">
                                         <button type="submit" class="btn btn-primary btn-lg w-100">Login</button>
@@ -97,62 +81,72 @@
                 </div>
             </div>
         </section>
-        </div>
+    </div>
 
     <script src="${pageContext.request.contextPath}/js/vendor/jquery-2.2.4.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script src="${pageContext.request.contextPath}/js/vendor/bootstrap.min.js"></script>			
     <script src="${pageContext.request.contextPath}/js/easing.min.js"></script>			
     <script src="${pageContext.request.contextPath}/js/jquery.ajaxchimp.min.js"></script>
     <script src="${pageContext.request.contextPath}/js/jquery.magnific-popup.min.js"></script>	
     <script src="${pageContext.request.contextPath}/js/owl.carousel.min.js"></script>			
-    
     <script src="${pageContext.request.contextPath}/js/jquery.nice-select.min.js"></script>			
     <script src="${pageContext.request.contextPath}/js/parallax.min.js"></script>	
     <script src="${pageContext.request.contextPath}/js/mail-script.js"></script>
-    <script src="${pageContext.request.contextPath}/js/isotope.pkgd.min.js"></script>	
     <script src="${pageContext.request.contextPath}/js/main.js"></script>	
 
     <script>
-        document.getElementById('login-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('error-message');
-            const contextPath = "${pageContext.request.contextPath}";
-
-            errorMessage.classList.add('d-none');
-
-            fetch(`${contextPath}/api/admin/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    username: username,
-                    password: password
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = `${contextPath}/admin`;
-                } else {
-                    return response.json();
-                }
-            })
-            .then(data => {
-                if (data) {
-                    errorMessage.textContent = data.message;
-                    errorMessage.classList.remove('d-none');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                errorMessage.textContent = 'Lỗi mạng hoặc không thể kết nối đến server.';
-                errorMessage.classList.remove('d-none');
-            });
-        });
-    </script>
+	    document.getElementById('login-form').addEventListener('submit', function(event) {
+	        event.preventDefault();
+	
+	        const username = document.getElementById('username').value.trim();
+	        const password = document.getElementById('password').value;
+	        const errorMessage = document.getElementById('error-message');
+	        const contextPath = "${pageContext.request.contextPath}";
+	
+	        errorMessage.classList.add('d-none');
+	
+	        if (!username || !password) {
+	            errorMessage.textContent = 'Vui lòng nhập đầy đủ thông tin.';
+	            errorMessage.classList.remove('d-none');
+	            return;
+	        }
+	
+	        // SEND FORM DATA (NOT JSON)
+	        const formData = new URLSearchParams();
+	        formData.append('username', username);
+	        formData.append('password', password);
+	
+	        fetch(contextPath + "/api/admin/login", {
+	            method: 'POST',
+	            headers: {
+	                'Content-Type': 'application/x-www-form-urlencoded'
+	            },
+	            body: formData
+	        })
+	        .then(response => {
+	            if (response.ok) {
+	                return response.json().then(data => {
+	                    window.location.href = contextPath + "/admin";
+	                });
+	            } else if (response.status === 401) {
+	                return response.text().then(text => {
+	                    // Servlet sends plain text error
+	                    throw new Error(text.includes("Username") ? "Username hoặc mật khẩu không đúng" : "Lỗi xác thực");
+	                });
+	            } else {
+	                throw new Error("Lỗi server");
+	            }
+	        })
+	        .then(() => {
+	            // Success redirect already done
+	        })
+	        .catch(error => {
+	            console.error('Login error:', error);
+	            errorMessage.textContent = error.message || 'Lỗi kết nối. Vui lòng thử lại.';
+	            errorMessage.classList.remove('d-none');
+	        });
+	    });
+	</script>
 </body>
 </html>
